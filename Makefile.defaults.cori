@@ -1,0 +1,107 @@
+#
+# Default build settings for libpfasst.
+#
+
+
+#  Set some variables to determine what is included in the build
+#  The "?=" checks to see  if they have  been defined so that applications
+#  that need the FFT can specify it automatically in the local Makefile
+DEBUG ?= FALSE
+MKVERBOSE ?= FALSE
+USE_PETSC ?= FALSE
+USE_HYPRE ?= FALSE
+USE_SUNDIALS ?= FALSE
+USE_AMREX ?= FALSE
+USE_FFT ?= FALSE
+
+
+#  File for compiler options
+include $(LIBPFASST)/Makefile.local
+
+
+VPATHS = $(LIBPFASST)/src
+LDFLAGS +=  -L$(LIBPFASST)/lib -lpfasst 
+
+#  Source files
+FSRC = src/pfasst.f90 \
+       src/pf_comm.f90 \
+       src/pf_dtype.f90 \
+       src/pf_fft.f90 \
+       src/pf_hooks.f90 \
+       src/pf_interpolate.f90 \
+       src/pf_mgrit.f90 \
+       src/pf_parallel.f90 \
+       src/pf_parareal.f90 \
+       src/pf_parallel_oc.f90 \
+       src/pf_pfasst.f90 \
+       src/pf_quadrature.f90 \
+       src/pf_restrict.f90 \
+       src/pf_results.f90 \
+       src/pf_rkstepper.f90 \
+       src/pf_erkstepper.f90 \
+       src/pf_solutions.f90 \
+       src/pf_stop.f90 \
+       src/pf_timer.f90 \
+       src/pf_utils.f90 \
+       src/pf_ham_sys_encap.f90 \
+       src/pf_ndarray_encap.f90 \
+       src/pf_ndarray_oc_encap.f90 \
+       src/pf_ndsysarray_encap.f90 \
+       src/pf_zndsysarray_encap.f90 \
+       src/pf_zndarray_encap.f90 \
+#       src/pf_exp_sweeper.f90 \
+#       src/pf_fexp_sweeper.f90 \
+#       src/pf_imex_sweeper.f90 \
+#       src/pf_imexR_sweeper.f90 \
+#       src/pf_imexQ_oc_sweeper.f90 \
+#       src/pf_imk_sweeper.f90 \
+#       src/pf_magpicard_sweeper.f90 \
+#       src/pf_misdcQ_sweeper.f90 \
+#       src/pf_misdcQ_oc_sweeper.f90 \
+#       src/pf_verlet_sweeper.f90
+
+#   AMReX options
+ifeq ($(USE_AMREX),TRUE)
+include $(LIBPFASST)/Makefile.AMReX
+endif
+
+#  FFT options
+ifeq ($(USE_FFT),TRUE)
+include $(LIBPFASST)/Makefile.FFT
+endif
+
+#   PETSc options
+ifeq ($(USE_PETSC),TRUE)
+include $(LIBPFASST)/Makefile.PETSc
+endif
+
+#  SUNDIALS options
+ifeq ($(USE_SUNDIALS),TRUE)
+include $(LIBPFASST)/Makefile.SUNDIALS
+endif
+
+ifeq ($(USE_HYPRE),TRUE)
+include $(LIBPFASST)/Makefile.hypre
+endif
+
+ifdef NOMPI
+  FFLAGS += -DNOMPI
+else
+  FSRC += src/pf_mpi.f90
+endif
+
+ifdef OMP
+  FFLAGS += -fopenmp
+endif
+
+OBJ  = $(subst src, build,$(FSRC:.f90=.o) $(CSRC:.c=.o))
+ifeq ($(USE_FFT),TRUE)
+OBJ  += $(subst src,build,$(F77SRC:.f=.o))
+endif
+
+
+
+
+
+
+
