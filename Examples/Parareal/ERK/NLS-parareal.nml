@@ -1,0 +1,21 @@
+!
+!  Test parameters for the serial nonlinear Schroedinger eq tests
+!
+
+&PARAMS
+
+    Tfin = 14
+    nx =   1024 1024        ! grid points on fine and coarse level
+
+    nsteps = 2048
+    nsteps_rk = 1 32
+    rk_order = 3 4
+
+    eq_type = 1	
+    ic_type = 1	
+
+    rho=0.0245436926061703   !  pi/128
+    Lx=25.1327412287183      !  8 pi
+
+    pfasst_nml="parareal.nml"  !  Use the common input file for pfasst parameters   
+/

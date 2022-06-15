@@ -7,12 +7,12 @@
     Tfin = 14
     nx =   1024
 
-    nsteps = 4096
+    nsteps = 4096                       ! Total RK steps are 2^19
     nsteps_rk = 128
     rk_order = 4 
 
     eq_type = 1	
-    ic_type = 3	
+    ic_type = 1	
 
     dealias = .true.                    !  3/2 antialiasing
     rho = 0                             !  no repartitioning needed for serial
