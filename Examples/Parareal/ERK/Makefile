@@ -6,6 +6,8 @@ LIBPFASST ?= ../../../../LibPFASST
 LIBNPY ?= $(LIBPFASST)/libnpy
 DO_EXP=TRUE
 DO_RK=TRUE
+USE_FFT?=TRUE
+USE_FFTW?=TRUE
 
 DIM=1
 EXE = main.$(DIM)d.exe
