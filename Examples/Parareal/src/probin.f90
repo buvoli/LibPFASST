@@ -21,6 +21,7 @@ module probin
   integer, save :: nsteps_rk(PF_MAXLEVS)       ! number of time steps for rk
   integer, save :: rk_order(PF_MAXLEVS)         ! number of time steps for rk
   integer, save :: splitting       ! type of imex splitting
+  logical, save :: dealias ! apply dealiasing
   !  parameters for advection diffusion
   real(pfdp), save :: lam1,lam2 ! coefficients for Dahlquist
   real(pfdp), save :: a,b,c   ! advection velocities
@@ -36,8 +37,7 @@ module probin
   real(pfdp), save :: gamma    
   !  parameters for split damping
   real(pfdp), save :: d0,d1,r0,r1  
-  logical,    save :: split_damp
-  real(pfdp), save :: split_rho
+  real(pfdp), save :: rho
   character(len=32), save :: pfasst_nml
 
   character(len=64), save :: output ! directory name for output
@@ -47,7 +47,7 @@ module probin
   integer :: ios,iostat 
   namelist /params/  nx,ic_type, eq_type, nsteps,nsteps_rk,rk_order, dt, Tfin
   namelist /params/  pfasst_nml, lam1,lam2,a,b,c, nu, t00, sigma, beta, gamma, splitting
-  namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1,split_damp,split_rho  
+  namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1,rho,dealias  
 
 contains
 
@@ -72,6 +72,7 @@ contains
     nsteps  = -1
     nsteps_rk  = -1
     rk_order  = 2
+    dealias = .FALSE.
 
     lam1    = -1.0_pfdp
     lam2    = 0.5_pfdp
@@ -87,9 +88,9 @@ contains
     Lx      = two_pi
     Ly      = two_pi
     Lz      = two_pi
+    ! Default repartitioning constant is 0
+    rho=0.0_pfdp
     ! Default damping parameters are 0
-    split_damp=.true.
-    split_rho=two_pi/256.0_pfdp
     d0=0.0_pfdp
     d1=0.0_pfdp
     r0=0.0_pfdp
@@ -161,38 +162,24 @@ contains
     write(un,*) 'Tfin:   ', Tfin,   '! Final time of run'
     write(un,*) 'nx:     ',  nx(1:pf%nlevels), '! grid size per level'
     write(un,*) 'Domain:     ', Lx,Ly,Lz, '! domain size'
-    write(un,*) 'splitting:', splitting, '! 1,2, or 3'
+    write(un,*) 'rho:', rho, '! reparititoning constant'
+    write(un,*) 'dealias:', dealias, '! true or false'
 
     select case (eq_type)
-    case (0)  
-       write(un,*) 'Solving the linear Dahlquist equation'
-       write(un,*) 'lam1,lam2', lam1,lam2, '! Dahlquist constants'
     case (1)  
-       write(un,*) 'Solving the linear advection diffusion equation'
-       write(un,*) 'adevct coef: ',  a,b,c, '! advection velocities'
-       write(un,*) 'nu:     ', nu, '! diffusion constant'
-       select case (ic_type)
-       case (0)  
-          write(un,*) 'Periodic Gaussian initial conditions with t00=',t00
-       case (1)  
-          write(un,*) 'Sine initial conditions with kfreq=',kfreq
-       case DEFAULT
-          call pf_stop(__FILE__,__LINE__,'Bad case  for ic_type ',ic_type)
-       end select
-    case (2)  
-       write(un,*) 'Solving Burgers equation'
-    case (3)  
-       write(un,*) 'Solving the nonlinear Schroedinger equation'
-    case (4)  
-       write(un,*) 'Solving the KDV equation'
-    case (5)  
-       write(un,*) 'Solving the Kuramoto-Shivashinsky equation'
-    case (6)  
-       write(un,*) 'Solving the Reaction-diffusion equation'
-    case (7)  
-       write(un,*) 'Solving the Zero dispersion optics'
+        write(un,*) 'Solving the nonlinear Schroedinger equation'   
+        select case (ic_type)
+            case (1)  
+                write(un,*) 'smooth initial condition'
+            case (2)  
+                write(un,*) 'oscillatory initial condition'
+            case (3)
+                write(un,*) 'full-spectrum initial condition'
+            case DEFAULT
+                call pf_stop(__FILE__,__LINE__,'Bad case  for ic_type ',ic_type)
+        end select
     case DEFAULT
-       call pf_stop(__FILE__,__LINE__,'Bad case  for eq_type ',eq_type)
+        call pf_stop(__FILE__,__LINE__,'Bad case  for eq_type ',eq_type)
     end select
 
     write(un,*) 'PFASST parameters read from input file ', pfasst_nml

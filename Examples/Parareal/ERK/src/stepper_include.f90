@@ -70,7 +70,7 @@ end subroutine destroy
 
 !F_EVAL: evaluates the nonlinear function f(t,y(t)) at y, t.
 subroutine f_eval(this, y, t, level_index, f)
-  use probin, only: eq_type,split_damp
+  use probin, only: eq_type
   ! arguments
   class(my_stepper_t), intent(inout) :: this
   class(pf_encap_t),   intent(in)    :: y
@@ -87,10 +87,7 @@ subroutine f_eval(this, y, t, level_index, f)
   call this%f_encap%get_array(this%fvec)        
   fft => this%fft_tool
   
-  call f_NL(this%yvec,this%fvec,this%fft_ops%opNL,this%tmp,fft)
-
-  ! include damping
-  if (split_damp)  this%fvec=  this%fvec - this%fft_ops%opDamp*this%yvec
+  call f_NL(this%yvec,this%fvec,this%fft_ops%opR,this%fft_ops%opNL,this%tmp,fft)
 end subroutine f_eval
 
   subroutine compA(this, dt, i, j, F, val)
