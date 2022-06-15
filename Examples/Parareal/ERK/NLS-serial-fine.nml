@@ -1,0 +1,22 @@
+!
+!  Test parameters for the serial nonlinear Schroedinger eq tests
+!
+
+&PARAMS
+
+    Tfin = 14
+    nx =   1024
+
+    nsteps = 4096
+    nsteps_rk = 128
+    rk_order = 4 
+
+    eq_type = 1	
+    ic_type = 3	
+
+    dealias = .true.                    !  3/2 antialiasing
+    rho = 0                             !  no repartitioning needed for serial
+    Lx = 25.1327412287183               !  8 pi
+
+    pfasst_nml="serial.nml"  
+/
