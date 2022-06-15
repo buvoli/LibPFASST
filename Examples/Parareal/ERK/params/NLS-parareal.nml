@@ -14,8 +14,9 @@
     eq_type = 1	
     ic_type = 1	
 
+    dealias = .true.         !  3/2 antialiasing
     rho=0.0245436926061703   !  pi/128
     Lx=25.1327412287183      !  8 pi
 
-    pfasst_nml="parareal.nml"  !  Use the common input file for pfasst parameters   
+    pfasst_nml="params/parareal.nml"  !  Use the common input file for pfasst parameters   
 /
