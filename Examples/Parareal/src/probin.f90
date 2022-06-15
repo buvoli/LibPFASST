@@ -162,7 +162,7 @@ contains
     write(un,*) 'Tfin:   ', Tfin,   '! Final time of run'
     write(un,*) 'nx:     ',  nx(1:pf%nlevels), '! grid size per level'
     write(un,*) 'Domain:     ', Lx,Ly,Lz, '! domain size'
-    write(un,*) 'rho:', rho, '! reparititoning constant'
+    write(un,*) 'rho:', rho, '! repartitioning constant'
     write(un,*) 'dealias:', dealias, '! true or false'
 
     select case (eq_type)
