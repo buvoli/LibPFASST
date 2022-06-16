@@ -21,5 +21,5 @@ $RUNNER $FLAGS_ERK main.1d.exe params/NLS-serial-fine.nml ic_type=2 nsteps_rk=65
 # Parareal ERK K=0,..,6
 for i in {0..6}
 do
-    $RUNNER $FLAGS_ERK main.1d.exe params/NLS-parareal.nml ic_type=2 niters="${i}" rho=0.0245436926061703 outdir="\"nls-exp2/parareal-k-${i}-\""
+    $RUNNER $FLAGS_PARA main.1d.exe params/NLS-parareal.nml ic_type=2 niters="${i}" rho=0.0245436926061703 outdir="\"nls-exp2/parareal-k-${i}-\""
 done
