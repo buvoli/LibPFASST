@@ -13,6 +13,7 @@ module pf_my_stepper
   ! Define the derived stepper type
   type, extends(pf_erk_stepper_t) :: my_stepper_t
      integer ::     nx
+     integer ::     ny
      ! phi storage space
      complex(pfdp), allocatable :: tmp(:,:)            ! local storage
      complex(pfdp),  allocatable :: A_phi(:,:,:)       ! coefficients for A vector
@@ -94,15 +95,15 @@ contains
     class(my_stepper_t), intent(inout) :: this
 
     integer :: istat
-    allocate(this%tmp(this%nx,this%nx),STAT=istat)
+    allocate(this%tmp(this%nx,this%ny),STAT=istat)
     if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
 
     ! allocate space for phi functions
-    allocate(this%A_phi(this%nx,this%nx, this%nnz_A),STAT=istat)
+    allocate(this%A_phi(this%nx,this%ny, this%nnz_A),STAT=istat)
     if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-    allocate(this%b_phi(this%nx,this%nx, this%nstages),STAT=istat)
+    allocate(this%b_phi(this%nx,this%ny, this%nstages),STAT=istat)
     if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-    allocate(this%d_phi(this%nx,this%nx, this%nstages),STAT=istat)
+    allocate(this%d_phi(this%nx,this%ny, this%nstages),STAT=istat)
     if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
     
   end subroutine initialize_tmp
@@ -120,7 +121,7 @@ contains
     real(pfdp) :: c1, c2
 
     num_phi = size(this%A,2)
-    allocate(phi(num_phi, this%nx, this%nx))
+    allocate(phi(num_phi, this%nx, this%ny))
     
     ! init A Tablaeu coefficients
     this%A_phi = (0.0_pfdp, 0.0_pfdp)

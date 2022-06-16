@@ -175,30 +175,33 @@ module pf_mod_fftops
 
   contains
 
-    subroutine fftops_init(this,fft,nx)
+    subroutine fftops_init(this,fft,grid_size)
       use probin, only: rho
       class(pf_fft_ops_t), intent(inout)    :: this
       type(pf_fft_t), pointer, intent(in) :: fft
-      integer, intent(in) :: nx
+      integer, intent(in) :: grid_size(2)
+      
+      integer :: istat, nx, ny
+      nx = grid_size(1)
+      ny = grid_size(2)
 
-      integer :: istat
-      allocate(this%lap(nx,nx),STAT=istat)
+      allocate(this%lap(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%ddx(nx,nx),STAT=istat)
+      allocate(this%ddx(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%ddy(nx,nx),STAT=istat)
+      allocate(this%ddy(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%opL(nx,nx),STAT=istat)
+      allocate(this%opL(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%opNL(nx,nx),STAT=istat)
+      allocate(this%opNL(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%opR(nx,nx),STAT=istat)
+      allocate(this%opR(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
       
       call fft%make_deriv(this%ddx,1) !  First derivative
       call fft%make_deriv(this%ddy,2) !  First derivative
       call fft%make_lap(this%lap)  !  Second derivative
-      
+
       ! initialize  operators
       call set_ops(this%opL,this%opR,this%opNL,this%ddx,this%ddy,this%lap, fft)
       

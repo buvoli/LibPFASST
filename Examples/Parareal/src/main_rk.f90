@@ -32,7 +32,7 @@ contains
     use hooks   !<  Local module for diagnostics and i/o
     use fnpy    
     !< Local module reading/parsing problem parameters    
-    use probin, only: dt,nx,grid_size,nsteps,nsteps_rk,print_loc_options,probin_init,Tfin
+    use probin, only: Ndim,dt,nx,ny,grid_size,nsteps,nsteps_rk,print_loc_options,probin_init,Tfin
 
     implicit none
     
@@ -66,7 +66,13 @@ contains
        allocate(my_stepper_t::pf%levels(l)%ulevel%stepper)
 
        !>  Allocate the shape array for level (here just one dimension)
-       grid_size=nx(l)
+       select case (Ndim)
+            case (1)
+                grid_size=nx(l)
+            case (2)
+                grid_size(1)=nx(l)
+                grid_size(2)=ny(l)
+       end select
        call pf_level_set_size(pf,l,grid_size,2*PRODUCT(grid_size))
     end do
 

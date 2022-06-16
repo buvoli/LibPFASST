@@ -19,12 +19,14 @@ subroutine initialize(this, pf,level_index)
   type(pf_pfasst_t),   intent(inout),target :: pf
   integer, intent(in) :: level_index
   
-  integer ::  nx,nnodes
+  integer ::  nx,ny,nnodes
   class(pf_level_t), pointer :: lev
   real(pfdp) :: dt_RK
   lev => pf%levels(level_index)
   this%nx=lev%lev_shape(1)
-  nx=this%nx
+  if ( Ndim .eq. 2 ) then
+    this%ny=lev%lev_shape(2)
+  endif
   nnodes=lev%nnodes
   
   !  set some info for the superclass
@@ -38,7 +40,7 @@ subroutine initialize(this, pf,level_index)
   allocate(this%fft_tool)
   call this%fft_tool%fft_setup(lev%lev_shape,Ndim,dom_size)
   allocate(this%fft_ops)
-  call this%fft_ops%init(this%fft_tool,this%nx)
+  call this%fft_ops%init(this%fft_tool,lev%lev_shape)
   
   !  Call routine to allocate local storage
   dt_RK=dt/real(nsteps_rk(level_index),pfdp)
