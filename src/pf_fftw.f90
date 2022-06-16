@@ -78,9 +78,9 @@ contains
        wk = fftw_alloc_complex(int(nx*ny, c_size_t))
        call c_f_pointer(wk, this%wk_2d, [nx,ny])
 
-       this%ffftw = fftw_plan_dft_2d(nx,ny, &
+       this%ffftw = fftw_plan_dft_2d(ny,nx, &
             this%wk_2d, this%wk_2d, FFTW_FORWARD, FFTW_ESTIMATE)
-       this%ifftw = fftw_plan_dft_2d(nx,ny, &
+       this%ifftw = fftw_plan_dft_2d(ny,nx, &
             this%wk_2d, this%wk_2d, FFTW_BACKWARD, FFTW_ESTIMATE)
     case (3)
        if(present(grid_size))then
