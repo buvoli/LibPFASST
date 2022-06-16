@@ -113,7 +113,7 @@ module phi_mod
         LV = reshape(L, (/ d /))
         call phi_zvector(LV, n, PM)
         ! Unpack Result
-        P = reshape(PM, (/n+1, Ln, Lm/))
+        P = reshape(PM, (/n+1, Lm, Ln/))
     end subroutine phi_zmatrix
 
     subroutine phi_zmatrix3d(L, n, P)
