@@ -228,7 +228,8 @@ contains
     integer :: nxmax,nymax
     nxmax = FLOOR(real(this%nx)/(1.0_pfdp+real(p,pfdp)))+1
     nymax = FLOOR(real(this%ny)/(1.0_pfdp+real(p,pfdp)))+1
-    yhat(nxmax+1:this%nx-nxmax,nymax+1:this%ny-nymax)=0.0_pfdp
+    yhat(nxmax+1:this%nx-nxmax, :)=0.0_pfdp
+    yhat(:, nymax+1:this%ny-nymax)=0.0_pfdp
   end subroutine dealias_2d
   
   subroutine dealias_3d(this,yhat,p)
