@@ -15,6 +15,7 @@ module probin
   integer, save, allocatable ::  grid_size(:)  !  Will hold the size of the grid
   real(pfdp),  save,allocatable :: kfreq(:)  ! wave numbers
   integer, save :: nx(PF_MAXLEVS)     ! number of grid points per level
+  integer, save :: ny(PF_MAXLEVS)     ! number of grid points per level
   integer, save :: ic_type         ! which initial condition
   integer, save :: eq_type         ! which equation to solve
   integer, save :: nsteps          ! number of time steps
@@ -45,7 +46,7 @@ module probin
   CHARACTER(LEN=255) :: message           ! use for I/O error messages
 
   integer :: ios,iostat 
-  namelist /params/  nx,ic_type, eq_type, nsteps,nsteps_rk,rk_order, dt, Tfin
+  namelist /params/  nx,ny,ic_type, eq_type, nsteps,nsteps_rk,rk_order, dt, Tfin
   namelist /params/  pfasst_nml, lam1,lam2,a,b,c, nu, t00, sigma, beta, gamma, splitting
   namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1,rho,dealias  
 
@@ -134,6 +135,11 @@ contains
        dom_size(3)=Lz
        kfreq(3)=kfreqz
     end if
+
+    grid_size(1) = nx(1)
+    if(Ndim .gt. 1) then
+        grid_size(2) = ny(1)
+    end if
        
     !  Reset dt if Tfin is set
     if (Tfin .gt. 0.0) dt = Tfin/dble(nsteps)
@@ -165,26 +171,37 @@ contains
     write(un,*) 'rho:', rho, '! repartitioning constant'
     write(un,*) 'dealias:', dealias, '! true or false'
 
-    select case (eq_type)
-    case (1)  
-        write(un,*) 'Solving the nonlinear Schroedinger equation'   
-        select case (ic_type)
-            case (1)  
-                write(un,*) 'smooth initial condition'
-            case (2)  
-                write(un,*) 'oscillatory initial condition'
-            case (3)
-                write(un,*) 'full-spectrum initial condition'
-            case DEFAULT
-                call pf_stop(__FILE__,__LINE__,'Bad case  for ic_type ',ic_type)
+    select case (Ndim)
+    case(1)
+        select case (eq_type)
+        case (1)  
+            write(un,*) 'Solving the nonlinear Schroedinger equation'   
+            select case (ic_type)
+                case (1)  
+                    write(un,*) 'smooth initial condition'
+                case (2)  
+                    write(un,*) 'oscillatory initial condition'
+                case (3)
+                    write(un,*) 'full-spectrum initial condition'
+                case DEFAULT
+                    call pf_stop(__FILE__,__LINE__,'Bad case  for ic_type ',ic_type)
+            end select
+        case DEFAULT
+            call pf_stop(__FILE__,__LINE__,'Bad case  for eq_type ',eq_type)
         end select
-    case DEFAULT
-        call pf_stop(__FILE__,__LINE__,'Bad case  for eq_type ',eq_type)
+    case(2)
+        select case (eq_type)
+        case (1)  
+            write(un,*) 'Solving the KP equation'
+        case (2)  
+            write(un,*) 'Solving the Vlasov-Poisson equation' 
+        case DEFAULT
+            call pf_stop(__FILE__,__LINE__,'Bad case  for eq_type ',eq_type)
+        end select
     end select
 
     write(un,*) 'PFASST parameters read from input file ', pfasst_nml
     write(un,*) '=================================================='
   end subroutine print_loc_options
   
-
 end module probin
