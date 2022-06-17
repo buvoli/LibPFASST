@@ -80,16 +80,18 @@ contains
     end do
 
   end subroutine ic_kp
-  
+    
   !> Routine to return set the linear and nonlinear operators
-  subroutine set_ops(opL, opR, opNL, ddx, ddy, lap, fft, fft1d)
-    use probin, only: eq_type, dealias, rho
+  subroutine set_ops(opL, opR, opNL1, opNL2, ddx, ddy, lap, fft, fft1d)
+    use probin, only: eq_type, dealias, rho, dom_size
     complex(pfdp), intent(inout) :: opL(:,:)
     complex(pfdp), intent(inout) :: opR(:, :)
-    complex(pfdp), intent(inout) :: opNL(:,:)
+    complex(pfdp), intent(inout) :: opNL1(:,:)
+    complex(pfdp), intent(inout) :: opNL2(:,:)
     complex(pfdp), intent(in) :: ddx(:,:),ddy(:,:),lap(:,:)
     type(pf_fft_t), intent(in), pointer :: fft
     type(pf_fft_t), pointer, intent(in) :: fft1d(:)
+
 
     select case (eq_type)
         
@@ -104,12 +106,12 @@ contains
                 opL  = opL + opR
             endif
 
-            opNL = - 3 * ddx
+            opNL1 = - 3 * ddx
             
             if(dealias) then
                 call fft%dealias(opL, 2)
                 call fft%dealias(opR, 2)
-                call fft%dealias(opNL, 2)                
+                call fft%dealias(opNL1, 2)                
             endif
 
         case DEFAULT
@@ -121,16 +123,17 @@ contains
   end subroutine set_ops
 
   !> Routine to compute the nonlinear operators
-  subroutine f_NL(yvec, fvec, opR, opNL, tmp, fft, fft1d)
+  subroutine f_NL(yvec, fvec, opR, opNL1, opNL2, tmp, fft, fft1d)
     use probin, only: eq_type, dealias, rho
     complex(pfdp), intent(in) :: yvec(:,:)
     complex(pfdp), intent(inout) :: fvec(:,:)
     complex(pfdp), intent(in) :: opR(:,:)
-    complex(pfdp), intent(in) :: opNL(:,:)
+    complex(pfdp), intent(in) :: opNL1(:,:)
+    complex(pfdp), intent(in) :: opNL2(:,:)
     complex(pfdp), intent(inout) :: tmp(:,:)
     type(pf_fft_t), intent(in),    pointer :: fft
     type(pf_fft_t), pointer, intent(in) :: fft1d(:)
-     
+
     fvec = yvec
     tmp  = yvec
 
@@ -142,7 +145,7 @@ contains
             call fft%ifft(tmp, tmp)
             tmp = tmp * tmp ! u^2
             call fft%fft(tmp, fvec)
-            fvec = opNL * fvec ! -3 d/dx u^2
+            fvec = opNL1 * fvec ! -3 d/dx u^2
             if ( rho .ne. 0.0_pfdp ) then
                 fvec = fvec - OpR * yvec
             endif
@@ -170,7 +173,8 @@ module pf_mod_fftops
      complex(pfdp), allocatable :: ddy(:,:) ! first derivative operator
      complex(pfdp), allocatable :: opL(:,:) ! implcit operator
      complex(pfdp), allocatable :: opR(:,:) ! Repartitioning operator
-     complex(pfdp), allocatable :: opNL(:,:) ! explicit operator
+     complex(pfdp), allocatable :: opNL1(:,:) ! explicit operator
+     complex(pfdp), allocatable :: opNL2(:,:) ! explicit operator
    contains
         procedure :: init  =>  fftops_init
         procedure :: destroy  =>  fftops_destroy
@@ -197,7 +201,9 @@ module pf_mod_fftops
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
       allocate(this%opL(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%opNL(nx,ny),STAT=istat)
+      allocate(this%opNL1(nx,ny),STAT=istat)
+      if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
+      allocate(this%opNL2(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
       allocate(this%opR(nx,ny),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
@@ -207,7 +213,7 @@ module pf_mod_fftops
       call fft%make_lap(this%lap)  !  Second derivative
 
       ! initialize  operators
-      call set_ops(this%opL,this%opR,this%opNL,this%ddx,this%ddy,this%lap,fft,fft1d)
+      call set_ops(this%opL,this%opR,this%opNL1,this%opNL2, this%ddx,this%ddy,this%lap,fft,fft1d)
       
       deallocate(this%lap)
       deallocate(this%ddx)
@@ -218,7 +224,8 @@ module pf_mod_fftops
       class(pf_fft_ops_t), intent(inout)    :: this
 
       deallocate(this%opL)
-      deallocate(this%opNL)
+      deallocate(this%opNL1)
+      deallocate(this%opNL2)
       deallocate(this%opR)
     end subroutine fftops_destroy
     

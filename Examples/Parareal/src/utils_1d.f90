@@ -121,10 +121,11 @@ contains
   end subroutine ic_nls_ppw
 
   !> Routine to return set the linear and nonlinear operators
-  subroutine set_ops(opL, opR, opNL, ddx,lap, fft, fft1d)
+  subroutine set_ops(opL, opR, opNL1, opNL2, ddx,lap, fft, fft1d)
     use probin, only: eq_type, dealias, rho
     complex(pfdp), intent(inout) :: opL(:)
-    complex(pfdp), intent(inout) :: opNL(:)
+    complex(pfdp), intent(inout) :: opNL1(:)
+    complex(pfdp), intent(inout) :: opNL2(:)
     complex(pfdp), intent(inout) :: opR(:)
     complex(pfdp), intent(in) :: ddx(:),lap(:)
     type(pf_fft_t), intent(in),  pointer :: fft
@@ -137,12 +138,12 @@ contains
                 opR  = -1.0_pfdp * abs(opL) / tan(two_pi/4.0_pfdp - rho)    
                 opL  = opL + opR
             endif
-            opNL = 0.0_pfdp
+            opNL1 = 0.0_pfdp
+            opNL2 = 0.0_pfdp
             
             if(dealias) then
                 call fft%dealias(opL, 2)
-                call fft%dealias(opR, 2)
-                call fft%dealias(opNL, 2)                
+                call fft%dealias(opR, 2)               
             endif
         case DEFAULT
             call pf_stop(__FILE__,__LINE__,'Bad case in SELECT',eq_type)
@@ -151,11 +152,12 @@ contains
   end subroutine set_ops
 
   !> Routine to compute the nonlinear operators
-  subroutine f_NL(yvec,fvec,opR,opNL,tmp,fft,fft1d)
+  subroutine f_NL(yvec,fvec,opR,opNL1,opNL2,tmp,fft,fft1d)
     use probin, only: eq_type,gamma,beta, dealias, rho
     complex(pfdp), intent(in) :: yvec(:)
     complex(pfdp), intent(inout) :: fvec(:)
-    complex(pfdp), intent(in) :: opNL(:)
+    complex(pfdp), intent(in) :: opNL1(:)
+    complex(pfdp), intent(in) :: opNL2(:)
     complex(pfdp), intent(in) :: opR(:)
     complex(pfdp), intent(inout) :: tmp(:)
     type(pf_fft_t), intent(in),    pointer :: fft
@@ -193,7 +195,8 @@ module pf_mod_fftops
      complex(pfdp), allocatable :: lap(:) ! Laplacian operators
      complex(pfdp), allocatable :: ddx(:)  ! first derivative operator
      complex(pfdp), allocatable :: opL(:)  ! implcit operator
-     complex(pfdp), allocatable :: opNL(:) ! explicit operator
+     complex(pfdp), allocatable :: opNL1(:) ! explicit operator
+     complex(pfdp), allocatable :: opNL2(:) ! explicit operator
      complex(pfdp), allocatable :: opR(:)  ! Repartitioning operator
    contains
         procedure :: init  =>  fftops_init
@@ -218,7 +221,9 @@ module pf_mod_fftops
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
       allocate(this%opL(nx),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
-      allocate(this%opNL(nx),STAT=istat)
+      allocate(this%opNL1(nx),STAT=istat)
+      if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
+      allocate(this%opNL2(nx),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
       
       call fft%make_deriv(this%ddx) !  First derivative
@@ -226,7 +231,7 @@ module pf_mod_fftops
       allocate(this%opR(nx),STAT=istat)
 
       ! initialize  operators
-      call set_ops(this%opL, this%opR, this%opNL, this%ddx, this%lap, fft, fft1d)
+      call set_ops(this%opL, this%opR, this%opNL1, this%opNL2, this%ddx, this%lap, fft, fft1d)
 
       deallocate(this%lap)
       deallocate(this%ddx)
@@ -236,7 +241,8 @@ module pf_mod_fftops
       class(pf_fft_ops_t), intent(inout)    :: this
 
       deallocate(this%opL)
-      deallocate(this%opNL)
+      deallocate(this%opNL1)
+      deallocate(this%opNL2)
       deallocate(this%opR)
       
     end subroutine fftops_destroy

@@ -95,7 +95,7 @@ subroutine f_eval(this, y, t, level_index, f)
   call this%f_encap%get_array(this%fvec)        
   fft => this%fft_tool
   
-  call f_NL(this%yvec,this%fvec,this%fft_ops%opR,this%fft_ops%opNL,this%tmp,fft, this%fft1d_tools)
+  call f_NL(this%yvec,this%fvec,this%fft_ops%opR,this%fft_ops%opNL1,this%fft_ops%opNL2, this%tmp, fft, this%fft1d_tools)
 end subroutine f_eval
 
   subroutine compA(this, dt, i, j, F, val)
