@@ -36,17 +36,19 @@ subroutine initialize(this, pf,level_index)
   ! call superclass initialize
   call this%erk_initialize(pf,level_index)
 
-  ! allocate fft & differentiation matrices
+  ! allocate and initialize fft transforms
   allocate(this%fft_tool)
   call this%fft_tool%fft_setup(lev%lev_shape,Ndim,dom_size)
-  allocate(this%fft_ops)
-  call this%fft_ops%init(this%fft_tool,this%fft1d_tools,lev%lev_shape)
   
-  ! allocate 1 dimensional tranforms
+  ! allocate 1 dimensional transforms
   allocate(this%fft1d_tools(Ndim))
   do i = 1, Ndim
     call this%fft1d_tools(i)%fft_setup(lev%lev_shape(i:i), 1, dom_size(i:i))
   enddo
+
+  ! allocated and initialize fft operators
+  allocate(this%fft_ops)
+  call this%fft_ops%init(this%fft_tool,this%fft1d_tools,lev%lev_shape)
 
   !  Call routine to allocate local storage
   dt_RK=dt/real(nsteps_rk(level_index),pfdp)
