@@ -12,7 +12,7 @@ contains
 
   !> Routine to return the exact solution
   subroutine exact(fft, fft1d, t, y_exact)
-    use probin, only: dealias
+    use probin, only: eq_type, dealias
     type(pf_fft_t), pointer, intent(in) :: fft
     type(pf_fft_t), pointer, intent(in) :: fft1d(:)
     real(pfdp), intent(in)  :: t
@@ -20,16 +20,25 @@ contains
     
     complex(pfdp), pointer :: yex(:,:)
     complex(pfdp), pointer :: yreal(:,:)  !  Real space exact solution
+    integer :: i, Nv
 
     allocate(yreal(y_exact%arr_shape(1),y_exact%arr_shape(2)))
 
     call y_exact%get_array(yex)    
     call exact_realspace(t,yreal)
 
-    call fft%fft(yreal,yex)
-    if(dealias) then
-        call fft%dealias(yex, 2)
-    endif
+    select case (eq_type)
+        case (1) ! KP equation (transform x,y into Fourier space)
+            call fft%fft(yreal,yex)
+            if(dealias) then
+                call fft%dealias(yex, 2)
+            endif
+        case (2) ! VP equation (transform only x into Fourier space)
+            Nv = SIZE(yex,2)
+            do i = 1, Nv
+                call fft1d(1)%fft(yreal(:,i), yex(:,i))
+            enddo
+    end select
 
     deallocate(yreal)
     
@@ -46,6 +55,8 @@ contains
     select case (eq_type)
         case (1) ! KP equation
             call ic_kp(yex, dom_size)
+        case (2) ! VP equation
+            call ic_vp(yex, dom_size)
         case DEFAULT
             call pf_stop(__FILE__,__LINE__,'Bad case  for eq_type ',eq_type)
     end select
@@ -81,6 +92,29 @@ contains
 
   end subroutine ic_kp
     
+  subroutine ic_vp(u0, dom_size)
+    complex(pfdp), intent(inout) :: u0(:,:)
+    real(pfdp), intent(in) :: dom_size(2)
+    
+    integer    :: Nx, Nv, i, j
+    real(pfdp) :: x, v, Lx, Lv
+    
+    Nx = SIZE(u0, 1)
+    Nv = SIZE(u0, 2)
+
+    Lx = dom_size(1)
+    Lv = dom_size(2)
+    
+    do j = 1, Nv
+        v = Lv*REAL(j-1,pfdp)/REAL(Nv,pfdp)  - Lv / 2.0_pfdp
+        do i = 1, nx
+            x = Lx*REAL(i-1,pfdp)/REAL(Nx,pfdp)
+            u0(i,j) = ( 0.9_pfdp / sqrt(two_pi) * exp(-v**2.0_pfdp  / 2.0_pfdp) + 0.2_pfdp / sqrt(two_pi) * exp(-2.0_pfdp * (v - 4.5_pfdp) ** 2.0_pfdp)) * ( 1.0_pfdp + 0.04_pfdp * cos(0.3_pfdp * x))
+        end do
+    end do
+
+  end subroutine ic_vp
+
   !> Routine to return set the linear and nonlinear operators
   subroutine set_ops(opL, opR, opNL1, opNL2, ddx, ddy, lap, fft, fft1d)
     use probin, only: eq_type, dealias, rho, dom_size
@@ -92,13 +126,15 @@ contains
     type(pf_fft_t), intent(in), pointer :: fft
     type(pf_fft_t), pointer, intent(in) :: fft1d(:)
 
+    integer :: Nv, j
+    real(pfdp) :: Lv, v
 
     select case (eq_type)
         
         case (1) ! KP Equation
             
             opL = 3 * (ddy ** 2) / ddx
-            opL(1, :) = 0; ! zero our first x mode
+            opL(1, :) = 0; ! zero out first x mode
             opL = opL - 1.0_pfdp * (ddx ** 3)
             
             if ( rho .ne. 0.0_pfdp ) then
@@ -114,6 +150,36 @@ contains
                 call fft%dealias(opNL1, 2)                
             endif
 
+        case (2) ! VP Equation
+
+            Nv = SIZE(opL, 2)
+            Lv = dom_size(2)
+    
+            opL = ddx
+            do j = 1, Nv
+                v = Lv*REAL(j-1,pfdp)/REAL(Nv,pfdp)  - Lv / 2.0_pfdp
+                opL(:,j) = -1.0_pfdp * v * opL(:,j)               
+            end do
+        
+            if ( rho .ne. 0.0_pfdp ) then
+                opR  = -1.0_pfdp * abs(opL) / tan(two_pi/4.0_pfdp - rho)    
+                opL  = opL + opR
+            endif
+
+            opNl1 = 1 / ddx ! IDX
+            opNl1(1, :) = 0 ! zero out first x mode
+
+            opNl2 = ddy ! DV
+
+            if(dealias) then
+                do j = 1, Nv
+                    call fft1d(1)%dealias(opL(:, j), 2)
+                    call fft1d(1)%dealias(opR(:, j), 2)
+                    call fft1d(1)%dealias(opNL1(:, j), 2)
+                    call fft1d(1)%dealias(opNL2(:, j), 2)
+                end do              
+            endif
+
         case DEFAULT
         
             call pf_stop(__FILE__,__LINE__,'Bad case in SELECT',eq_type)
@@ -124,7 +190,7 @@ contains
 
   !> Routine to compute the nonlinear operators
   subroutine f_NL(yvec, fvec, opR, opNL1, opNL2, tmp, fft, fft1d)
-    use probin, only: eq_type, dealias, rho
+    use probin, only: eq_type, dealias, rho, dom_size
     complex(pfdp), intent(in) :: yvec(:,:)
     complex(pfdp), intent(inout) :: fvec(:,:)
     complex(pfdp), intent(in) :: opR(:,:)
@@ -134,13 +200,18 @@ contains
     type(pf_fft_t), intent(in),    pointer :: fft
     type(pf_fft_t), pointer, intent(in) :: fft1d(:)
 
-    fvec = yvec
-    tmp  = yvec
+    integer :: Nx, Nv, i
+    real(pfdp) :: Lv, dv
+
+
 
     select case (eq_type)
         
         case (1) ! KP Equation
 
+            fvec = yvec
+            tmp  = yvec
+        
             if (dealias) call fft%dealias(tmp,2)
             call fft%ifft(tmp, tmp)
             tmp = tmp * tmp ! u^2
@@ -150,6 +221,51 @@ contains
                 fvec = fvec - OpR * yvec
             endif
             if (dealias) call fft%dealias(fvec,2)
+
+        case (2) ! VP Equation
+
+            Nx = SIZE(opNL1, 1)
+            Nv = SIZE(opNL1, 2)
+            Lv = dom_size(2)
+            dv = Lv / Nv
+
+            ! --> E Term  (stored in tmp)     
+            tmp = opNL1 ! IDX
+            tmp(1, :) = (dv * sum(yvec(1, :)) - Nv) * tmp(1, :)
+            do i = 2, Nx
+                tmp(i, :) = (dv * sum(yvec(i, :))) * tmp(i, :)
+            enddo
+            do i = 1, Nv
+                call fft1d(1)%ifft(tmp(:, i), tmp(:, i))
+            enddo
+
+            !--> F_v term (stored in fvec)
+            fvec = yvec
+            do i = 1, Nx
+                call fft1d(2)%fft(fvec(i, :), fvec(i, :)) ! transform in v
+            enddo
+            fvec = opNL2 * fvec ! DV * \hat{y}
+            call fft%ifft(fvec, fvec)
+
+            ! --> E * F_v
+            fvec = -1.0_pfdp * fvec * tmp
+
+            ! Repartitioning
+            if ( rho .ne. 0.0_pfdp ) then
+                fvec = fvec - OpR * yvec
+            endif
+
+            if (dealias) then
+                call fft%fft(fvec, fvec)
+                call fft%dealias(fvec, 2)
+                do i = 1, Nx ! inverse v transform
+                    call fft1d(2)%ifft(fvec(i, :), fvec(i, :))
+                enddo
+            else
+                do i = 1, Nv ! forwards x
+                    call fft1d(1)%fft(fvec(:,i), fvec(:,i))
+                enddo
+            endif
 
         case DEFAULT
 
