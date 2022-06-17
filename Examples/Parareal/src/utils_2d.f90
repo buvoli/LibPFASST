@@ -11,9 +11,10 @@ module pf_mod_zutils
 contains  
 
   !> Routine to return the exact solution
-  subroutine exact(fft,t, y_exact)
+  subroutine exact(fft, fft1d, t, y_exact)
     use probin, only: dealias
     type(pf_fft_t), pointer, intent(in) :: fft
+    type(pf_fft_t), pointer, intent(in) :: fft1d(:)
     real(pfdp), intent(in)  :: t
     type(pf_zndarray_t), intent(inout) :: y_exact
     
@@ -81,13 +82,14 @@ contains
   end subroutine ic_kp
   
   !> Routine to return set the linear and nonlinear operators
-  subroutine set_ops(opL, opR, opNL, ddx, ddy, lap, fft)
+  subroutine set_ops(opL, opR, opNL, ddx, ddy, lap, fft, fft1d)
     use probin, only: eq_type, dealias, rho
     complex(pfdp), intent(inout) :: opL(:,:)
     complex(pfdp), intent(inout) :: opR(:, :)
     complex(pfdp), intent(inout) :: opNL(:,:)
     complex(pfdp), intent(in) :: ddx(:,:),ddy(:,:),lap(:,:)
     type(pf_fft_t), intent(in), pointer :: fft
+    type(pf_fft_t), pointer, intent(in) :: fft1d(:)
 
     select case (eq_type)
         
@@ -119,7 +121,7 @@ contains
   end subroutine set_ops
 
   !> Routine to compute the nonlinear operators
-  subroutine f_NL(yvec, fvec, opR, opNL, tmp, fft)
+  subroutine f_NL(yvec, fvec, opR, opNL, tmp, fft, fft1d)
     use probin, only: eq_type, dealias, rho
     complex(pfdp), intent(in) :: yvec(:,:)
     complex(pfdp), intent(inout) :: fvec(:,:)
@@ -127,6 +129,7 @@ contains
     complex(pfdp), intent(in) :: opNL(:,:)
     complex(pfdp), intent(inout) :: tmp(:,:)
     type(pf_fft_t), intent(in),    pointer :: fft
+    type(pf_fft_t), pointer, intent(in) :: fft1d(:)
      
     fvec = yvec
     tmp  = yvec
@@ -175,10 +178,11 @@ module pf_mod_fftops
 
   contains
 
-    subroutine fftops_init(this,fft,grid_size)
+    subroutine fftops_init(this,fft,fft1d,grid_size)
       use probin, only: rho
-      class(pf_fft_ops_t), intent(inout)    :: this
+      class(pf_fft_ops_t), intent(inout)  :: this
       type(pf_fft_t), pointer, intent(in) :: fft
+      type(pf_fft_t), pointer, intent(in) :: fft1d(:)
       integer, intent(in) :: grid_size(2)
       
       integer :: istat, nx, ny
@@ -203,7 +207,7 @@ module pf_mod_fftops
       call fft%make_lap(this%lap)  !  Second derivative
 
       ! initialize  operators
-      call set_ops(this%opL,this%opR,this%opNL,this%ddx,this%ddy,this%lap, fft)
+      call set_ops(this%opL,this%opR,this%opNL,this%ddx,this%ddy,this%lap,fft,fft1d)
       
       deallocate(this%lap)
       deallocate(this%ddx)

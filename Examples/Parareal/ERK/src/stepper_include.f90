@@ -19,7 +19,7 @@ subroutine initialize(this, pf,level_index)
   type(pf_pfasst_t),   intent(inout),target :: pf
   integer, intent(in) :: level_index
   
-  integer ::  nx,ny,nnodes
+  integer ::  i, nx, ny, nnodes
   class(pf_level_t), pointer :: lev
   real(pfdp) :: dt_RK
   lev => pf%levels(level_index)
@@ -40,8 +40,14 @@ subroutine initialize(this, pf,level_index)
   allocate(this%fft_tool)
   call this%fft_tool%fft_setup(lev%lev_shape,Ndim,dom_size)
   allocate(this%fft_ops)
-  call this%fft_ops%init(this%fft_tool,lev%lev_shape)
+  call this%fft_ops%init(this%fft_tool,this%fft1d_tools,lev%lev_shape)
   
+  ! allocate 1 dimensional tranforms
+  allocate(this%fft1d_tools(Ndim))
+  do i = 1, Ndim
+    call this%fft1d_tools(i)%fft_setup(lev%lev_shape(i:i), 1, dom_size(i:i))
+  enddo
+
   !  Call routine to allocate local storage
   dt_RK=dt/real(nsteps_rk(level_index),pfdp)
   call this%initialize_tmp()
@@ -89,7 +95,7 @@ subroutine f_eval(this, y, t, level_index, f)
   call this%f_encap%get_array(this%fvec)        
   fft => this%fft_tool
   
-  call f_NL(this%yvec,this%fvec,this%fft_ops%opR,this%fft_ops%opNL,this%tmp,fft)
+  call f_NL(this%yvec,this%fvec,this%fft_ops%opR,this%fft_ops%opNL,this%tmp,fft, this%fft1d_tools)
 end subroutine f_eval
 
   subroutine compA(this, dt, i, j, F, val)

@@ -48,7 +48,7 @@ contains
     
     !>  compute the exact solution
     t=pf%state%t0+pf%state%dt
-    call exact(stepper%fft_tool,t, y_ex)
+    call exact(stepper%fft_tool, stepper%fft1d_tools, t, y_ex)
 
     !>  compute error
     call y_ex%axpy(-1.0d0,pf%levels(level_index)%qend)
@@ -79,7 +79,7 @@ contains
 
     !>  compute the exact solution
     t=pf%state%t0+pf%state%dt
-    call exact(stepper%fft_tool,t, y_ex)
+    call exact(stepper%fft_tool, stepper%fft1d_tools, t, y_ex)
 
     !>  compute error
     call y_ex%axpy(-1.0d0,pf%levels(level_index)%qend)

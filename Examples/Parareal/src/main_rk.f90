@@ -137,7 +137,7 @@ contains
     class(my_stepper_t), intent(inout) :: this
     type(pf_zndarray_t), intent(inout) :: y_0
 
-    call exact(this%fft_tool,0.0_pfdp, y_0)    
+    call exact(this%fft_tool, this%fft1d_tools, 0.0_pfdp, y_0)    
     
   end subroutine set_ic
 

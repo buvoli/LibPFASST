@@ -22,8 +22,9 @@ module pf_my_stepper
      real(pfdp)                  :: dt_phi             ! dt used to store coefficients
      ! fft object and differentiaton matrices
      type(pf_fft_t), pointer :: fft_tool
+     type(pf_fft_t), pointer :: fft1d_tools(:) ! fft tool for transforms in only one dimension
      type(pf_fft_ops_t), pointer :: fft_ops
-     complex(pfdp), pointer :: p_tmp(:,:)   ! a useful pointer
+     complex(pfdp), pointer :: p_tmp(:,:) ! a useful pointer
      !  Useful for making f_eval and f_comp generic
      class(pf_zndarray_t), pointer :: f_encap,rhs_encap,y_encap
      complex(pfdp),      pointer :: yvec(:,:), rhsvec(:,:), fvec(:,:)          
