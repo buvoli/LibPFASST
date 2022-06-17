@@ -199,13 +199,15 @@ module pf_mod_fftops
 
   contains
 
-    subroutine fftops_init(this,fft,nx)
+    subroutine fftops_init(this,fft,grid_size)
       use probin, only: d0,d1,r0,r1,rho
       class(pf_fft_ops_t), intent(inout)    :: this
       type(pf_fft_t), pointer, intent(in) :: fft
-      integer, intent(in) :: nx
+      integer, intent(in) :: grid_size(1)
 
-      integer :: istat
+      integer :: istat, nx
+      nx = grid_size(1)
+
       allocate(this%lap(nx),STAT=istat)
       if (istat .ne. 0)  call pf_stop(__FILE__,__LINE__,'Allocate failed ',istat)
       allocate(this%ddx(nx),STAT=istat)

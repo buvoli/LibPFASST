@@ -13,6 +13,7 @@ module pf_my_stepper
   ! Define the derived stepper type
   type, extends(pf_erk_stepper_t) :: my_stepper_t
      integer ::     nx
+     integer ::     ny = 0 ! dummy variable for 1d
      ! phi storage space
      complex(pfdp),  allocatable :: tmp(:)         ! local storage
      complex(pfdp),  allocatable :: A_phi(:,:)     ! coefficients for A vector
