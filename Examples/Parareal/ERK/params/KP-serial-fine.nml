@@ -1,0 +1,24 @@
+!
+!  Parameters for the serial KP equation experiment
+!
+
+&PARAMS
+
+    Tfin = 4
+    nx = 972                            ! x grid points on fine level
+    ny = 750                            ! y grid points on fine level
+    
+    nsteps = 1                       
+    nsteps_rk = 524288                  ! Total RK steps are 2^19
+    rk_order = 4 
+
+    eq_type = 1	
+    ic_type = 1	
+
+    dealias = .true.                    !  3/2 antialiasing
+    rho = 0                             !  no repartitioning needed for reference
+    Lx = 50.265482457436690             !  16 pi
+    Ly = 25.1327412287183               !  8 pi
+    
+    pfasst_nml="params/serial.nml"  
+/
