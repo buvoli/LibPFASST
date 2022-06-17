@@ -9,7 +9,7 @@ DO_RK=TRUE
 USE_FFT?=TRUE
 USE_FFTW?=TRUE
 
-DIM=1
+DIM?=1
 EXE = main.$(DIM)d.exe
 all: $(EXE)
 BUILDDIR = build
