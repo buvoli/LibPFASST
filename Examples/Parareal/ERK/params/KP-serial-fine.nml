@@ -12,8 +12,7 @@
     nsteps_rk = 524288                  ! Total RK steps are 2^19
     rk_order = 4 
 
-    eq_type = 1	
-    ic_type = 1	
+    eq_type = 1
 
     dealias = .true.                    !  3/2 antialiasing
     rho = 0                             !  no repartitioning needed for reference
