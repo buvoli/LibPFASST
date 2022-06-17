@@ -203,8 +203,6 @@ contains
     integer :: Nx, Nv, i
     real(pfdp) :: Lv, dv
 
-
-
     select case (eq_type)
         
         case (1) ! KP Equation
@@ -357,7 +355,7 @@ module pf_mod_fftops
     complex(pfdp), pointer :: yreal(:,:)  !  Real space exact solution
     logical :: do_complex
     
-    do_complex=.false.
+    do_complex=.true.
     if (present(do_complex_in)) do_complex=do_complex_in
 
     call y_out%get_array(y)  !  Grab the solution from encapsulationi
