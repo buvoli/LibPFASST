@@ -8,15 +8,19 @@ RUNNER='mpirun'
 FLAGS_ERK='-n 1'
 FLAGS_PARA='-n 1'
 
-make # ensure that code is compiled
+make DIM=1 # ensure that code is compiled
 
 set -x # (print commands are they run)
 
 # Serial ERK (Reference)
-$RUNNER $FLAGS_ERK main.1d.exe params/NLS-serial-fine.nml ic_type=2 nsteps_rk=524288 rho=0 outdir='"nls-exp2/serial-ref-"'
+if [ ! -d "dat/nls-exp2/serial-ref-P0001/" ] ; then
+    $RUNNER $FLAGS_ERK main.1d.exe params/NLS-serial-fine.nml ic_type=2 nsteps_rk=524288 rho=0 outdir='"nls-exp2/serial-ref-"'
+fi
 
 # Serial ERK (Fine)
-$RUNNER $FLAGS_ERK main.1d.exe params/NLS-serial-fine.nml ic_type=2 nsteps_rk=65536 rho=0.0245436926061703 outdir='"nls-exp2/serial-fine-"'
+if [ ! -d "dat/nls-exp2/serial-fine-P0001/" ] ; then
+    $RUNNER $FLAGS_ERK main.1d.exe params/NLS-serial-fine.nml ic_type=2 nsteps_rk=65536 rho=0.0245436926061703 outdir='"nls-exp2/serial-fine-"'
+fi
 
 # Parareal ERK K=0,..,6
 for i in {0..6}
