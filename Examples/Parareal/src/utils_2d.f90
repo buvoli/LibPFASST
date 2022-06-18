@@ -248,11 +248,6 @@ contains
             ! --> E * F_v
             fvec = -1.0_pfdp * fvec * tmp
 
-            ! Repartitioning
-            if ( rho .ne. 0.0_pfdp ) then
-                fvec = fvec - OpR * yvec
-            endif
-
             if (dealias) then
                 call fft%fft(fvec, fvec)
                 call fft%dealias(fvec, 2)
@@ -263,6 +258,11 @@ contains
                 do i = 1, Nv ! forwards x
                     call fft1d(1)%fft(fvec(:,i), fvec(:,i))
                 enddo
+            endif
+
+            ! Repartitioning
+            if ( rho .ne. 0.0_pfdp ) then
+                fvec = fvec - OpR * yvec
             endif
 
         case DEFAULT
