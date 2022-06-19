@@ -137,13 +137,15 @@ contains
     999 call pf_stop(__FILE__,__LINE__, "Error opening file")    
   end subroutine dump_results
 
-  subroutine dump_timingsl(this,pf)
+  subroutine dump_timingsl(this, pf, filename)
     type(pf_results_t), intent(inout) :: this
     type(pf_pfasst_t), intent(inout) :: pf
     character(len = 128   ) :: pname     !!  processor name
     character(len = 256   ) :: fullname  !!  output file name for runtimes
     character(len = 128   ) :: datpath  !!  directory path
     character(len = 128   ) :: strng      !  used for string conversion
+    character(*), optional, intent(in) :: filename
+        
     integer :: j, iout,system,nlev,k,kmax
     real(pfdp) :: qarr(pf%nlevels)
 
@@ -151,7 +153,12 @@ contains
     if (pf%save_timings .eq. 0) return
     
     !  Write a json file with timer numbers and times
-    fullname = trim(this%datpath) // '/runtime.json'
+    if(present(filename)) then
+        fullname = trim(this%datpath) // '/' // filename
+    else
+        fullname = trim(this%datpath) // '/runtime.json'
+    end if
+    
     iout = 4000+pf%rank !  Use processor dependent file number
     nlev=pf%nlevels
     !  output timings
