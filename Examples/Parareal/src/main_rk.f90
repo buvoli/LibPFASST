@@ -118,7 +118,9 @@ contains
     end if
 
     !> save solution at end
-    call numpy_dump(stepper%fft_tool,Tfin,y_end, (trim(pf%results%datpath) // '/yend.npy'))    
+    if(pf%rank == pf%comm%nproc - 1) then
+        call numpy_dump(stepper%fft_tool,Tfin,y_end, (trim(pf%results%datpath) // '/yend.npy'))
+    endif
 
     !>  deallocate initial condition and final solution
     call zndarray_destroy(y_0)
