@@ -161,20 +161,26 @@ contains
     if (pf%save_timings > 1) kmax=4
 
     do k=1,kmax
-       write(iout,"(A24,A1,e14.6,A1)") wrap_timer_name(timer_names(k)), ': ', pf%pf_timers%runtimes(k,1), ','
+       if(k .gt. 1) then ! add comma to any previous item
+         write(iout,"(A1)") ','
+       end if
+       write(iout,"(A24,A1,e14.6)", advance='no') wrap_timer_name(timer_names(k)), ': ', pf%pf_timers%runtimes(k,1)
     end do
     if (pf%save_timings > 1) then
        do k=kmax+1,PF_NUM_TIMERS
-          if (nlev .eq. 1) then
-             write(iout,"(A24,A1,e14.6,A1)") wrap_timer_name(timer_names(k)), ':', pf%pf_timers%runtimes(k,1), ','
+        if((k .gt. kmax+1) .or. (kmax .gt. 0)) then ! add comma to any previous item
+            write(iout,"(A1)") ','
+        end if   
+        if (nlev .eq. 1) then
+             write(iout,"(A24,A1,e14.6)", advance='no') wrap_timer_name(timer_names(k)), ':', pf%pf_timers%runtimes(k,1)
           else
              qarr=pf%pf_timers%runtimes(k,1:nlev)
              strng=trim(convert_real_array(qarr,nlev))       
-             write(iout,"(A24,A1,A60,A1)")  wrap_timer_name(timer_names(k)),':', adjustl(strng), ','
+             write(iout,"(A24,A1,A60)", advance='no')  wrap_timer_name(timer_names(k)),':', adjustl(strng)
           end if
        end do
     end if
-    write(iout,*) '"foo":"0"'
+    write(iout,*) ''
     write(iout,*) '}'
     
     close(iout)
