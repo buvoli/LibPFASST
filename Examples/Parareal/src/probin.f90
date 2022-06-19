@@ -23,6 +23,7 @@ module probin
   integer, save :: rk_order(PF_MAXLEVS)         ! number of time steps for rk
   integer, save :: splitting       ! type of imex splitting
   logical, save :: dealias ! apply dealiasing
+  logical, save :: save_last_proc_iters !saves output of each parareal iteration for the last processor
   !  parameters for advection diffusion
   real(pfdp), save :: lam1,lam2 ! coefficients for Dahlquist
   real(pfdp), save :: a,b,c   ! advection velocities
@@ -48,7 +49,7 @@ module probin
   integer :: ios,iostat 
   namelist /params/  nx,ny,ic_type, eq_type, nsteps,nsteps_rk,rk_order, dt, Tfin
   namelist /params/  pfasst_nml, lam1,lam2,a,b,c, nu, t00, sigma, beta, gamma, splitting
-  namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1,rho,dealias  
+  namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1,rho,dealias, save_last_proc_iters  
 
 contains
 
@@ -74,6 +75,7 @@ contains
     nsteps_rk  = -1
     rk_order  = 2
     dealias = .FALSE.
+    save_last_proc_iters = .FALSE.
 
     lam1    = -1.0_pfdp
     lam2    = 0.5_pfdp
