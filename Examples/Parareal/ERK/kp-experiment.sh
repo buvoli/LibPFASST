@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-#  Runs the third NLS experiment from paper
+#  Runs the KP experiment from paper
 # =============================================================================
 
 RUNNER='mpirun'
