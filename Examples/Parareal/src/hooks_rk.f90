@@ -8,6 +8,7 @@ module hooks
   use pf_mod_zutils
   implicit none
 contains
+
   !>  Output the error and residual in the solution
   subroutine dump_sol(pf, level_index)
     use probin, only: grid_size
@@ -28,8 +29,39 @@ contains
     !> save solution at end
     write (yname, "(A1,I0.5,A4)") 'y',pf%state%step+1,'.npy'
     call numpy_dump(stepper%fft_tool,t,yend, (trim(pf%results%datpath) // '/' // trim(yname)))
-    print *,'hi',yname
+    print *,'saving ',yname
   end subroutine dump_sol
+
+  !>  Output the Pararael solution for the last processor
+  subroutine saveLastProcIteration(pf, level_index)
+    use probin, only: save_last_proc_iters
+    use pf_mod_fftops
+    use pf_my_stepper, only: my_stepper_t, as_my_stepper
+    type(pf_pfasst_t), intent(inout) :: pf
+    character(len = 24) :: filename
+    real(pfdp) :: t    
+    integer, intent(in) :: level_index
+
+    integer :: parareal_iteration, proc_rank, num_procs, coarse_step
+    class(my_stepper_t), pointer :: stepper
+    class(pf_zndarray_t), pointer :: yend
+
+    parareal_iteration = pf%state%iter
+    coarse_step = pf%state%step+1
+    proc_rank = pf%rank
+    num_procs = pf%comm%nproc
+
+    if( (save_last_proc_iters) .and. ( proc_rank .eq. num_procs - 1 ) ) then
+        
+        stepper => as_my_stepper(pf%levels(level_index)%ulevel%stepper)    
+        yend => cast_as_zndarray(pf%levels(level_index)%qend)
+    
+        write (filename, "(A4,I0.5,A6,I0.5,A4)") 'sol-', coarse_step , '-iter-', parareal_iteration, '.npy'
+        call numpy_dump(stepper%fft_tool, t, yend, (trim(pf%results%datpath) // '/' // trim(filename)))
+
+    endif
+    
+  end subroutine saveLastProcIteration
   
   !>  Output the error and residual in the solution
   subroutine echo_error(pf, level_index)
