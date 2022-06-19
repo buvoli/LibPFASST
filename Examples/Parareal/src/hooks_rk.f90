@@ -37,8 +37,11 @@ contains
     use probin, only: save_last_proc_iters
     use pf_mod_fftops
     use pf_my_stepper, only: my_stepper_t, as_my_stepper
+    use pf_mod_results
+    use pf_mod_timer
     type(pf_pfasst_t), intent(inout) :: pf
-    character(len = 24) :: filename
+    character(len = 24) :: filename_solution
+    character(len = 27) :: filename_timings
     real(pfdp) :: t    
     integer, intent(in) :: level_index
 
@@ -53,11 +56,16 @@ contains
 
     if( (save_last_proc_iters) .and. ( proc_rank .eq. num_procs - 1 ) ) then
         
-        stepper => as_my_stepper(pf%levels(level_index)%ulevel%stepper)    
-        yend => cast_as_zndarray(pf%levels(level_index)%qend)
-    
-        write (filename, "(A4,I0.5,A6,I0.5,A4)") 'sol-', coarse_step , '-iter-', parareal_iteration, '.npy'
-        call numpy_dump(stepper%fft_tool, t, yend, (trim(pf%results%datpath) // '/' // trim(filename)))
+        if( level_index .eq. 2 ) then ! save solution to file
+            stepper => as_my_stepper(pf%levels(level_index)%ulevel%stepper)    
+            yend => cast_as_zndarray(pf%levels(level_index)%qend)
+            write (filename_solution, "(A4,I0.5,A6,I0.5,A4)") 'sol-', coarse_step , '-iter-', parareal_iteration, '.npy'
+            call numpy_dump(stepper%fft_tool, t, yend, (trim(pf%results%datpath) // '/' // trim(filename_solution)))
+        else if (level_index .eq. 1) then ! save current timings to file
+            write (filename_timings, "(A8,I0.4,A6,I0.4,A5)") 'runtime-', coarse_step , '-iter-', parareal_iteration, '.json'
+            call pf_stop_timer(pf, T_TOTAL, level_index)
+            call dump_timingsl(pf%results, pf, filename_timings)
+        end if
 
     endif
     
