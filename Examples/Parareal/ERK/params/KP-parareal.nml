@@ -1,5 +1,5 @@
 !
-!  Test parameters for the serial nonlinear Schroedinger eq tests
+!  Parameters for the Parareal KP Equation experiment
 !
 
 &PARAMS
@@ -11,6 +11,7 @@
     nsteps = 8192
     nsteps_rk = 1 32
     rk_order = 3 4
+    save_last_proc_iters = .True.
 
     eq_type = 1
 
