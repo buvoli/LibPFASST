@@ -30,11 +30,15 @@ if [ ! -d "dat/${base_dir}/serial-fine-P0001/" ] ; then
     $RUNNER $FLAGS_ERK main.2d.exe params/VP-serial-fine.nml nsteps_rk=131072 nx="${nx}" ny="${ny}" rho=0.0245436926061703 outdir="\"${base_dir}/serial-fine-\""
 fi
 
-# Parareal ERK NG=1,...,3 and K=0,...,12
+# Parareal ERK NG=1,...,3 and K=12
 for j in {1..3}
 do
-    for i in {0..12}
-    do
-        $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml nx="${nx} ${nx}" ny="${ny} ${ny}" niters="${i}" nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"${base_dir}/parareal-ng-${j}-k-${i}-\""
-    done
+    # Serial ERK (Coarse)
+    nsteps_rk=$(( j * 2048 ))
+    if [ ! -d "dat/${base_dir}/serial-coarse-ng-${j}-P0001/" ] ; then
+        $RUNNER $FLAGS_ERK main.2d.exe params/VP-serial-coarse.nml nsteps_rk="${nsteps_rk}" nx="${nx}" ny="${ny}" rho=0.0245436926061703 outdir="\"${base_dir}/serial-coarse-ng-${j}-\""
+    fi
+
+    #Parareal K=12
+    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml nx="${nx} ${nx}" ny="${ny} ${ny}" niters=12 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"${base_dir}/parareal-ng-${j}-\""
 done
