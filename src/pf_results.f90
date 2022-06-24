@@ -140,11 +140,11 @@ contains
   subroutine dump_timingsl(this, pf, filename)
     type(pf_results_t), intent(inout) :: this
     type(pf_pfasst_t), intent(inout) :: pf
+    character(*), optional, intent(in) :: filename
     character(len = 128   ) :: pname     !!  processor name
     character(len = 256   ) :: fullname  !!  output file name for runtimes
     character(len = 128   ) :: datpath  !!  directory path
     character(len = 128   ) :: strng      !  used for string conversion
-    character(*), optional, intent(in) :: filename
         
     integer :: j, iout,system,nlev,k,kmax
     real(pfdp) :: qarr(pf%nlevels)
