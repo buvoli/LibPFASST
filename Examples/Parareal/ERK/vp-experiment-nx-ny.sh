@@ -31,7 +31,7 @@ if [ ! -d "dat/${base_dir}/serial-fine-P0001/" ] ; then
 fi
 
 # Parareal ERK NG=1,...,3 and K=12
-for j in {1..3}
+for j in {2..3}
 do
     # Serial ERK (Coarse)
     nsteps_rk=$(( j * 2048 ))

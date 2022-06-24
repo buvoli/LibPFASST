@@ -10,7 +10,7 @@
 
     nsteps = 2048
     nsteps_rk = 1 64
-    rk_order = 4 4
+    rk_order = 3 4
     save_last_proc_iters = .True.
 
     eq_type = 2

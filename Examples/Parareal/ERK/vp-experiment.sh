@@ -27,7 +27,7 @@ if [ ! -d "dat/vp/serial-fine-P0001/" ] ; then
 fi
 
 # Parareal ERK NG=1,...,3 and K=12
-for j in {1..3}
+for j in {2..3}
 do
     # Serial ERK (Coarse)
     nsteps_rk=$(( j * 2048 ))
@@ -36,5 +36,5 @@ do
     fi
 
     # Parareal ERK K=12
-    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml nx="${nx} ${nx}" ny="${ny} ${ny}" niters=12 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"vp/parareal-ng-${j}-\""
+    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml nx="${nx} ${nx}" ny="${ny} ${ny}" niters=13 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"vp/parareal-ng-${j}-\""
 done

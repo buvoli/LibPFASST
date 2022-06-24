@@ -9,8 +9,8 @@
     ny = 1024                       ! y grid points on fine level
     
     nsteps = 1                       
-    nsteps_rk = 2048
-    rk_order = 4
+    nsteps_rk = 4096
+    rk_order = 3
 
     eq_type = 2
 
