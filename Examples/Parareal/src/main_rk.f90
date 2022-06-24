@@ -78,6 +78,7 @@ contains
 
     !>  Set up some pfasst stuff
     pf%use_sdc_sweeper=.FALSE.
+    pf%nsteps_rk = nsteps_rk ! set manually here for pfasst_parameters.json (Note: this value is not set or used in pf_parareal) 
     call pf_pfasst_setup(pf)
 
     !> add some hooks for output
