@@ -295,4 +295,134 @@ contains
     
   end subroutine save
 
+  !>  Subroutine to send the solution to the next processor
+  subroutine pf_sendTo(pf, level, sol_type, dest, tag, blocking, which, wait_after)
+    type(pf_pfasst_t), intent(inout) :: pf
+    class(pf_level_t),  intent(inout) :: level
+    integer,           intent(in)    :: tag
+    logical,           intent(in)    :: blocking
+    integer,           intent(in)    :: dest
+    integer, optional, intent(in)    :: sol_type
+    integer, optional, intent(in)    :: which
+    LOGICAL, optional, intent(in)    :: wait_after
+    !  Local variables 
+    integer                          :: which_=1
+    integer                          :: ierr=0     ! error flag
+    integer ::  rank,istatus
+
+    if (pf%comm%nproc .eq. 1) return
+    
+    rank=pf%rank               !  Rank of sending processor
+    istatus=pf%state%status 
+
+    if(present(which)) which_ = which
+    if((sol_type .ne. 1) .and. (sol_type .ne. 0)) call pf_stop(__FILE__,__LINE__,'bad value for sol_type',val=sol_type,rank=rank)
+
+    ! need to wait here to make sure last non-blocking send is done
+    if(blocking .eqv. .false.) then
+
+       if (pf%debug) print  '("DEBUG-rank=", I5, " begin wait, level=",I4)',rank,level%index
+
+       call pf_start_timer(pf, T_WAIT_SEND, level%index)
+       call pf%comm%wait(pf, level%index, ierr)       
+       call pf_stop_timer(pf, T_WAIT_SEND, level%index)
+       
+       if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'error during wait, ierr',val=ierr,rank=rank)
+       if (pf%debug) print  '("DEBUG-rank=", I5, " end wait, level=",I4)',rank,level%index
+    end if
+
+    !  check valid destination
+    if (dest < 0  .or. dest > pf%comm%nproc-1) return
+
+    !  Pack the solution to send
+    call pf_start_timer(pf, T_PACK, level%index)
+    if(sol_type == 0) then
+       call level%q0%pack(level%send, which_)
+    else
+       call level%qend%pack(level%send, which_) ! The imk encap now ignores the flag in pack and upack
+    end if
+    call pf_stop_timer(pf, T_PACK, level%index)
+
+    !  Do the send 
+    if (pf%debug) print  '("DEBUG-rank=", I5, " begin sendTo, dest=",I4,"level=",I4, " tag=", I8," blocking=", L3," status=",I3)',rank,dest,level%index,tag,blocking,istatus
+
+    call pf_start_timer(pf, T_SEND, level%index)
+    call pf%comm%send(pf, level, tag, blocking, ierr, dest)
+    call pf_stop_timer(pf, T_SEND,level%index)
+
+    !  Check for an error
+    if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'error during send, ierr',val=ierr,rank=rank)
+    if (pf%debug) print  '("DEBUG-rank=", I5, " end send, level=",I4, " tag=", I8," blocking=", L3," status=",I3)',rank,level%index,tag,blocking,istatus
+
+
+    if(present(wait_after) .and. wait_after) then
+
+       if (pf%debug) print  '("DEBUG-rank=", I5, " begin wait, level=",I4)',rank,level%index
+
+       call pf_start_timer(pf, T_WAIT_SEND, level%index)
+       call pf%comm%wait(pf, level%index, ierr)       
+       call pf_stop_timer(pf, T_WAIT_SEND, level%index)
+       
+       if (ierr /= 0) call pf_stop(__FILE__,__LINE__,'error during wait, ierr',val=ierr,rank=rank)
+       if (pf%debug) print  '("DEBUG-rank=", I5, " end wait, level=",I4)',rank,level%index
+
+    end if
+
+
+  end subroutine pf_sendTo
+
+  !>  Subroutine to recieve the solution from the previous processor
+  subroutine pf_recvFrom(pf, level, sol_type, source, tag, blocking, which)
+    type(pf_pfasst_t), intent(inout) :: pf
+    type(pf_level_t),  intent(inout) :: level
+    integer,           intent(in)    :: sol_type ! 0 - send q0, 1 - send qend
+    integer,           intent(in)    :: source
+    integer,           intent(in)    :: tag
+    logical,           intent(in)    :: blocking
+    integer, optional, intent(in)    :: which
+    
+    !  Local variables 
+    integer                          :: which_=1
+
+    integer                          :: ierr=0      ! error flag
+    integer                          :: ntimer
+    integer ::  rank,pstatus
+
+    pstatus=pf%state%pstatus
+    if (pf%comm%nproc .eq. 1) return
+    rank=pf%rank
+    
+    if(present(which)) which_ = which
+    if((sol_type .ne. 1) .and. (sol_type .ne. 0)) call pf_stop(__FILE__,__LINE__,'bad value for sol_type',val=sol_type,rank=rank)
+
+    if (pf%debug) print '("DEBUG-rank=",I5," begin recvFrom, source=",I4,"blocking=",L4," tag=",I8," pstatus=", I2)',rank,source,blocking,tag,pstatus
+
+    ! verify source is valid
+    if (source < 0  .or. source > pf%comm%nproc-1) return 
+
+    if (blocking)  then
+       ntimer=T_RECEIVE
+    else
+       ntimer=T_WAIT_REC
+    end if
+    
+    call pf_start_timer(pf, ntimer, level%index)
+    call pf%comm%recv(pf, level,tag, blocking, ierr, source)
+    call pf_stop_timer(pf, ntimer, level%index)
+    
+    if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__,'error during receive, ierr',val=ierr,rank=pf%rank)
+    if (pf%debug) print*,  'DEBUG --',pf%rank, 'end recv', SIZE(level%recv)
+    
+    !  Unpack solution
+    call pf_start_timer(pf, T_UNPACK, level%index)
+    if (sol_type == 0) then
+       call level%q0%unpack(level%recv, which_)
+    else
+       call level%qend%unpack(level%recv, which_)
+    end if
+    call pf_stop_timer(pf, T_UNPACK, level%index)
+  
+    if (pf%debug) print  '("DEBUG-rank=", I5, " end recv, blocking=" ,L4, " tag=",I8, " pstatus=", I2)',rank,blocking,tag,pstatus
+  end subroutine pf_recvFrom
+
 end module pf_mod_comm
