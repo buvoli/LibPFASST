@@ -40,5 +40,5 @@ do
     fi
 
     #Parareal K=12
-    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml nx="${nx} ${nx}" ny="${ny} ${ny}" niters=12 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"${base_dir}/parareal-ng-${j}-\""
+    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml predictor_proc_group_size="32" nx="${nx} ${nx}" ny="${ny} ${ny}" niters=12 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"${base_dir}/parareal-ng-${j}-\""
 done

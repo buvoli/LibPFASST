@@ -32,9 +32,9 @@ do
     # Serial ERK (Coarse)
     nsteps_rk=$(( j * 2048 ))
     if [ ! -d "dat/vp/serial-coarse-ng-${j}-P0001/" ] ; then
-        $RUNNER $FLAGS_ERK main.2d.exe params/VP-serial-coarse.nml nsteps_rk="${nsteps_rk}" nx="${nx}" ny="${ny}" rho=0.0245436926061703 outdir="\"vp/serial-coarse-ng-${j}-\""
+        $RUNNER $FLAGS_ERK main.2d.exe params/VP-serial-coarse.nml nsteps_rk="${nsteps_rk}" rho=0.0245436926061703 outdir="\"vp/serial-coarse-ng-${j}-\""
     fi
 
     # Parareal ERK K=12
-    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml nx="${nx} ${nx}" ny="${ny} ${ny}" niters=13 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"vp/parareal-ng-${j}-\""
+    $RUNNER $FLAGS_PARA main.2d.exe params/VP-parareal.nml predictor_proc_group_size="32" niters=13 nsteps_rk="${j} 64" rho=0.0245436926061703 outdir="\"vp/parareal-ng-${j}-\""
 done
