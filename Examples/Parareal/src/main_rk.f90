@@ -32,7 +32,7 @@ contains
     use hooks   !<  Local module for diagnostics and i/o
     use fnpy    
     !< Local module reading/parsing problem parameters    
-    use probin, only: Ndim,dt,nx,ny,grid_size,nsteps,nsteps_rk,print_loc_options,probin_init,Tfin
+    use probin, only: Ndim,dt,nx,ny,grid_size,nsteps,nsteps_rk,print_loc_options,probin_init,Tfin,predictor_proc_group_size
 
     implicit none
     
@@ -108,7 +108,7 @@ contains
     call mpi_barrier(pf%comm%comm, ierror)
 
     !> do the parareal time stepping
-    call pf_parareal_run(pf, y_0, dt, 0.0_pfdp, nsteps,y_end)    
+    call pf_parareal_run(pf, y_0, dt, 0.0_pfdp, nsteps,y_end, pred_group_size=predictor_proc_group_size)    
     
     !>  wait for everyone to be done
     call mpi_barrier(pf%comm%comm, ierror)
