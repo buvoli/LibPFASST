@@ -19,20 +19,26 @@ module pf_mod_parareal
   
 contains
   !>  Do the parareal algorithm
-  subroutine pf_parareal_run(pf, q0, dt, tend, nsteps, qend)
+  subroutine pf_parareal_run(pf, q0, dt, tend, nsteps, qend, pred_group_size)
     type(pf_pfasst_t), intent(inout), target   :: pf   !!  The complete PFASST structure
     class(pf_encap_t), intent(in   )           :: q0   !!  The initial condition
     real(pfdp),        intent(in   )           :: dt   !!  The time step for each processor
     real(pfdp),        intent(in   )           :: tend !!  The final time of run
     integer,           intent(in   ), optional :: nsteps  !!  The number of time steps
     class(pf_encap_t), intent(inout), optional :: qend    !!  The computed solution at tend
-
+    integer,           intent(in   ), optional :: pred_group_size !! processor group size for Parareal predictor (see pf_parareal_predictor)
+    
     !  Local variables
     integer :: nproc  !!  Total number of processors
     integer :: nsteps_loc  !!  local number of time steps
     real(pfdp) :: tend_loc !!  The final time of run
-    integer :: ierr 
+    integer :: ierr, pred_group_size_
 
+    if(present(pred_group_size)) then
+        pred_group_size_ = pred_group_size
+    else
+        pred_group_size_ = 1
+    end if
 
     ! make a local copy of nproc
     nproc = pf%comm%nproc
@@ -59,6 +65,9 @@ contains
     !  do sanity checks on Nproc
     if (mod(nsteps,nproc) > 0)  call pf_stop(__FILE__,__LINE__,'nsteps must be multiple of nproc ,nsteps=',nsteps)
 
+    ! do sanity checks on group_size
+    if(mod(nproc, pred_group_size_) .ne. 0) call pf_stop(__FILE__,__LINE__,'pred_group_size must be a divisor of nproc ,nproc=',nproc)
+
     !>  Allocate stuff for holding results 
     call initialize_results(pf)
     
@@ -68,9 +77,9 @@ contains
     !> Start timer
     call pf_start_timer(pf, T_TOTAL)
     if (present(qend)) then
-       call pf_parareal_block_run(pf, q0, dt, nsteps_loc,qend=qend)
+       call pf_parareal_block_run(pf, q0, dt, nsteps_loc, pred_group_size_, qend=qend)
     else
-       call pf_parareal_block_run(pf, q0, dt,  nsteps_loc)
+       call pf_parareal_block_run(pf, q0, dt,  nsteps_loc, pred_group_size_)
     end if
 
     !> End timer    
@@ -82,12 +91,13 @@ contains
   end subroutine pf_parareal_run
 
   !>  parareal controller for block mode
-  subroutine pf_parareal_block_run(pf, q0, dt, nsteps, qend,flags)
+  subroutine pf_parareal_block_run(pf, q0, dt, nsteps, pred_group_size, qend, flags)
     use pf_mod_mpi, only: MPI_REQUEST_NULL
     type(pf_pfasst_t), intent(inout), target   :: pf
     class(pf_encap_t), intent(in   )           :: q0
     real(pfdp),        intent(in   )           :: dt
     integer,           intent(in   )           :: nsteps
+    integer,           intent(in   )           :: pred_group_size
     class(pf_encap_t), intent(inout), optional :: qend
     integer,           intent(in   ), optional :: flags(:)
 
@@ -158,7 +168,7 @@ contains
        end if
 
        !> Call the predictor to get an initial guess on all levels and all processors
-       call pf_parareal_predictor(pf,  dt, flags)
+       call pf_parareal_predictor(pf, dt, pred_group_size, flags)
        ! After the predictor, the residual and delta_q0 are just zero
        if (pf%save_delta_q0) call pf_set_delta_q0(pf,1,0.0_pfdp)       
        call pf_set_resid(pf,pf%nlevels,0.0_pfdp)       
@@ -209,12 +219,35 @@ contains
     end if
   end subroutine pf_parareal_block_run 
 
-  !>  The parareal predictor does a serial integration on the coarse level followed
-  !>  by a fine integration if there is a fine level
-  subroutine pf_parareal_predictor(pf, dt, flags)
+  !>  The parareal predictor computes the initial solution values values at
+  !>  each processor.  It sets each of the following values:
+  !>
+  !>    pf%levels(1)%q0   - coarse solution at beginning of coarse timestep
+  !>    pf%levels(1)%qend - coarse solution at end of coarse timestep
+  !>    f%levels(2)%q0    - fine solution at beginning of coarse timestep
+  !>    pf%levels(2)%qend - fine solution at end of coarse timestep
+  !>
+  !> This function divides all processors into groups of size group_size and
+  !> then uses a single processor to compute the initial values for the entire
+  !> group. The value group_size must be a divisor of num_procs. For example,
+  !> if groupsize=3 and num_procs=9 then:
+  !>
+  !>   - Proc 2 computes initial conditions for Procs 0, 1, and 2
+  !>   - Proc 5 computes initial conditions for Procs 3, 4, and 5
+  !>   - Proc 8 computes initial conditions for Procs 6, 7, and 8
+  !>
+  !> For problems where the computational cost of a coarse step is 
+  !> significantly larger than the computational cost of communication,
+  !> the groupsize should be set to the number of mpi tasks per node. This
+  !> ensures that (1) any communication remains local to the node and (2) only
+  !> one processor per node is used to compute the initial conditions (this
+  !> minimizes slowdown caused by running multiple cores on the same node)
+
+  subroutine pf_parareal_predictor(pf, dt, group_size, flags)
     type(pf_pfasst_t), intent(inout), target :: pf     !! PFASST main data structure
-    real(pfdp),        intent(in   )         :: dt     !! time step
-    integer,           intent(in   ), optional :: flags(:)  !!  User defined flags
+    real(pfdp),        intent(in)            :: dt     !! time step
+    integer,           intent(in)            :: group_size !! size of processor groups           
+    integer,           intent(in), optional  :: flags(:)  !!  User defined flags
 
     class(pf_level_t), pointer :: c_lev
     class(pf_level_t), pointer :: f_lev     
@@ -225,8 +258,8 @@ contains
     real(pfdp)                :: t_k             !!  Initial time at time step k
     real(pfdp)                :: dt_all          !!  Length of time to integrate 
 
-
-
+    integer :: i, factor, leader_rank
+    
     call call_hooks(pf, 1, PF_PRE_PREDICTOR)
     call pf_start_timer(pf, T_PREDICTOR)
 
@@ -235,7 +268,7 @@ contains
     f_lev => pf%levels(pf%state%finest_level)
 
     if (pf%debug) print*, 'DEBUG --', pf%rank, 'beginning parareal predictor'
-
+    
     !! Step 1. Getting the initial condition on the coarsest level
     if (pf%state%finest_level > 1) then
        if (pf%q0_style < 2) then  !  Copy coarse
@@ -243,27 +276,58 @@ contains
        end if
     end if
 
-    !!
-    !! Step 2. Do coarse level integration, no communication necessary
-    t_n=pf%state%t0   !  Time at beginning of this processor
-
-    !  First mimic all the previous processors to get the correct q0
-    if (pf%rank > 0) then
-       nsteps_c= c_lev%ulevel%stepper%nsteps*(pf%rank)  
-       dt_all=dt*real(pf%rank,pfdp)
-       t_k=t_n-real(pf%rank,pfdp)*dt  ! The actual initial time (beginning of block)
-       call c_lev%ulevel%stepper%do_n_steps(pf, 1, t_k, c_lev%q0,f_lev%q0,dt_all, nsteps_c)
-    end if
-    ! Now do one time step  (used as coarse propagator in first parareal iteration)
     nsteps_c= c_lev%ulevel%stepper%nsteps
-    call c_lev%ulevel%stepper%do_n_steps(pf, 1, t_n, f_lev%q0,f_lev%qend,dt, nsteps_c)    
+    t_n=pf%state%t0
+    
+    if(MOD(pf%rank + 1, group_size) .eq. 0) then ! -- group leader --------------------
+
+        ! compute solution for self and all other processors in group
+        factor = pf%rank - MOD(pf%rank, group_size)
+        
+        ! serially advance solution to previous leader (no communication)
+        if(factor .ne. 0) then
+            call c_lev%ulevel%stepper%do_n_steps(pf, 1, t_n, c_lev%q0, c_lev%qend, dt * real(factor, pfdp), nsteps_c * factor)
+        else
+            call c_lev%qend%copy(c_lev%q0) ! simply copy info since num_steps = 0
+        end if
+
+        ! compute q0 for all previous processors in group
+        do i = 1, group_size - 1
+            call pf_sendTo(pf, c_lev, 1, pf%rank - group_size + i, 1000, .false.) ! send qend value as q0 for proc with rank - group_size + i
+            call c_lev%ulevel%stepper%do_n_steps(pf, 1, t_n + real(i, pfdp) * dt, c_lev%qend, c_lev%qend, dt, nsteps_c) ! single coarse step
+        end do
+        if (group_size > 1) then
+            call pf_sendTo(pf, c_lev, 1, pf%rank - 1, 1001, .false., wait_after=.TRUE.) ! send qend value as qend of processor rank - group_size + i; NOTE: wait_after true since this may be last non-blocking call (avoid warning object was not returned to mpool ucp_requests )
+        end if
+        
+        ! store fine q0 value 
+        call f_lev%q0%copy(c_lev%qend)        
+        
+        ! advance one step, and store fine qend value 
+        call c_lev%ulevel%stepper%do_n_steps(pf, 1, t_n + dt * real(group_size, pfdp), c_lev%qend, c_lev%qend, dt, nsteps_c)
+        call f_lev%qend%copy(c_lev%qend)
+    
+    else ! -- follower --------------------------------------------------------
+        
+        ! receive q0 from node leader
+        leader_rank = pf%rank - MOD(pf%rank, group_size) + group_size - 1               
+        call pf_recvFrom(pf, c_lev, 0, leader_rank, 1000, .true.) ! recieve q0 from leader
+        call f_lev%q0%copy(c_lev%q0)
+
+        ! send q0 to previous neighbor (this provides qend for previous neighbor) - do not send if you are the first processor in the group
+        if(MOD(pf%rank, group_size) .ne. 0) then 
+            call pf_sendTo(pf, c_lev, 0, pf%rank - 1, 1001, .true.)
+        end if
+
+        ! recieve qend from subsequent neighbor
+        call pf_recvFrom(pf, c_lev, 1, pf%rank + 1, 1001, .true.)
+        call f_lev%qend%copy(c_lev%qend)
+
+    endif
 
     ! Save the coarse level value to be used in parareal iteration
     call c_lev%Q(1)%copy(f_lev%qend, flags=0)     
-    ! Save the fine level value
-!    call c_lev%qend%copy(f_lev%qend, flags=0)     
-!    call c_lev%q0%copy(f_lev%q0, flags=0)     
-
+   
     call pf_stop_timer(pf, T_PREDICTOR)
 
     call call_hooks(pf, -1, PF_POST_PREDICTOR)
