@@ -24,6 +24,7 @@ module probin
   integer, save :: splitting       ! type of imex splitting
   logical, save :: dealias ! apply dealiasing
   logical, save :: save_last_proc_iters !saves output of each parareal iteration for the last processor
+  integer, save :: predictor_proc_group_size ! allows for grouping of work for parareal predictor
   !  parameters for advection diffusion
   real(pfdp), save :: lam1,lam2 ! coefficients for Dahlquist
   real(pfdp), save :: a,b,c   ! advection velocities
@@ -49,7 +50,8 @@ module probin
   integer :: ios,iostat 
   namelist /params/  nx,ny,ic_type, eq_type, nsteps,nsteps_rk,rk_order, dt, Tfin
   namelist /params/  pfasst_nml, lam1,lam2,a,b,c, nu, t00, sigma, beta, gamma, splitting
-  namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1,rho,dealias, save_last_proc_iters  
+  namelist /params/  kfreqx,kfreqy,kfreqz,Lx,Ly,Lz,d0,d1,r0,r1
+  namelist /params/  rho,dealias, save_last_proc_iters, predictor_proc_group_size 
 
 contains
 
@@ -76,6 +78,7 @@ contains
     rk_order  = 2
     dealias = .FALSE.
     save_last_proc_iters = .FALSE.
+    predictor_proc_group_size = 1
 
     lam1    = -1.0_pfdp
     lam2    = 0.5_pfdp
@@ -168,6 +171,8 @@ contains
     write(un,*) 'rk_order: ', rk_order(1:pf%nlevels), '! Order of rk substeps'        
     write(un,*) 'Dt:     ', Dt, '! Time step size'
     write(un,*) 'Tfin:   ', Tfin,   '! Final time of run'
+    write(un,*) 'predictor_proc_group_size:', predictor_proc_group_size
+
     write(un,*) 'nx:     ',  nx(1:pf%nlevels), '! grid size per level'
     write(un,*) 'Domain:     ', Lx,Ly,Lz, '! domain size'
     write(un,*) 'rho:', rho, '! repartitioning constant'
