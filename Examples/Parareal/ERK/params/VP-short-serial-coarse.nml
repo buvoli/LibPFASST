@@ -1,0 +1,23 @@
+!
+!  Parameters for the serial VP equation experiment
+!
+
+&PARAMS
+
+    Tfin = 2.34375                  ! 50 * 96/2048
+    nx = 1024                       ! x grid points on fine level
+    ny = 1024                       ! y grid points on fine level
+    
+    nsteps = 1                       
+    nsteps_rk = 96
+    rk_order = 3
+
+    eq_type = 2
+
+    dealias = .true.                !  3/2 antialiasing
+    rho = 0.0245436926061703        !  pi/128
+    Lx = 62.831853071795862         !  20 pi
+    Ly = 16                             
+    
+    pfasst_nml="params/serial.nml"  
+/
