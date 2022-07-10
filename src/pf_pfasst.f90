@@ -80,13 +80,13 @@ contains
     pf%state%status  = 0
 
     ! Create the output directory if it is not there
-    ierr= system('mkdir -p dat')
+    ierr= system(MKDIR_PATH // ' -p dat')
     if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory dat")       
 
     !  Stick the number of processors on the end of the output directory 
     write (dirname, "(A1,I0.4)") 'P',pf%comm%nproc
     pf%outdir       = trim(pf%outdir)//trim(dirname)
-    ierr= system('mkdir -p dat/' // trim(pf%outdir))
+    ierr= system(MKDIR_PATH // ' -p dat/' // trim(pf%outdir))
     if (ierr .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make base directory")    
 
   end subroutine pf_pfasst_create
@@ -617,7 +617,7 @@ contains
     character(len = 128) :: datpath  !!  path to output files
 
     
-    istat= system('mkdir -p dat/' // trim(pf%outdir))       
+    istat= system(MKDIR_PATH // ' -p dat/' // trim(pf%outdir))       
     if (istat .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory in pf_print_options")
     datpath= 'dat/' // trim(pf%outdir)     
     !  Save the statistics before returning
@@ -643,7 +643,7 @@ contains
     
     if (pf%rank /= 0) return
     
-    istat= system('mkdir -p dat/' // trim(pf%outdir))       
+    istat= system(MKDIR_PATH // ' -p dat/' // trim(pf%outdir))       
     if (istat .ne. 0) call pf_stop(__FILE__,__LINE__, "Cannot make directory in pf_print_options")
     datpath= 'dat/' // trim(pf%outdir) 
     fname=trim(datpath) // '/pfasst_params.json'

@@ -23,6 +23,7 @@ module pf_mod_dtype
   real(pfdp),parameter ::  two_pi = 2.0_pfqp*qpi
   integer, parameter :: PF_MAXLEVS = 4
   integer, parameter :: PF_MAX_HOOKS = 32
+  character(len=*), parameter :: MKDIR_PATH = "mkdir"
 
   !> Quadrature node varieties
   integer, parameter :: SDC_GAUSS_LOBATTO   = 1
