@@ -1,0 +1,23 @@
+!
+!  Parameters for the serial KP Coarse integrator (Short Interval)
+!
+
+&PARAMS
+
+    Tfin = .046875                      ! 4 * 96 / 8192
+    nx = 972                            ! x grid points on fine level
+    ny = 750                            ! y grid points on fine level
+    
+    nsteps = 1                       
+    nsteps_rk = 96                      ! Total RK steps
+    rk_order = 3 
+
+    eq_type = 1
+
+    dealias = .true.                    !  3/2 antialiasing
+    rho=0.0245436926061703              !  pi/128
+    Lx = 50.265482457436690             !  16 pi
+    Ly = 25.1327412287183               !  8 pi
+    
+    pfasst_nml="params/serial.nml"  
+/

@@ -1,0 +1,24 @@
+!
+!  Parameters for the serial KP Fine integrator (Short Interval)
+!
+
+&PARAMS
+
+    Tfin = .046875              ! 4 * 96 / 8192
+    nx = 972 972                ! x grid points on fine and coarse level
+    ny = 750 750                ! y grid points on fine and coarse level
+
+    nsteps = 96
+    nsteps_rk = 1 32
+    rk_order = 3 4
+    save_last_proc_iters = .True.
+
+    eq_type = 1
+
+    dealias = .true.            !  3/2 antialiasing
+    rho=0.0245436926061703      !  pi/128
+    Lx = 50.265482457436690     !  16 pi
+    Ly = 25.1327412287183       !  8 pi
+
+    pfasst_nml="params/parareal.nml"  !  Use the common input file for pfasst parameters   
+/
